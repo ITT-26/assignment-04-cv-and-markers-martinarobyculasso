@@ -4,12 +4,8 @@
 
 ### References
 
-cv2 documentation
-
-itt sample code
-
-### Code
-- 
+- [OpenCV documentation](https://docs.opencv.org/)
+- ITT sample code (opencv_click.py)
 
 ---
 
@@ -30,11 +26,6 @@ itt sample code
 
 ### References
 
-cv2 documentation
-
-itt sample code
-
-https://gist.github.com/nkymut/1cb40ea6ae4de0cf9ded7332f1ca0d55
-
-### Code
-- 
+- [OpenCV documentation](https://docs.opencv.org/)
+- ITT sample code (aruco_sample.py, opencv_pyglet.py)
+- [cv2glet conversion function](https://gist.github.com/nkymut/1cb40ea6ae4de0cf9ded7332f1ca0d55)

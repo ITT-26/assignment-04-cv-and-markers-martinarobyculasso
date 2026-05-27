@@ -6,6 +6,12 @@ Assignment 4 for the Interactive Techniques and Technologies course (ITT), Unive
 
 Author: Martina Roby Culasso
 
+---
+
+Each folder contains an `info.txt` file with a description of the files and relevant notes.
+
+---
+
 ## Setup
 
 ```bash
