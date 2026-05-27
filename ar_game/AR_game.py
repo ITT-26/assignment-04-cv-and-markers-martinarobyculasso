@@ -90,8 +90,37 @@ def warp_frame(frame, source):
 
 
 def detect_finger(warped):
-    pass
 
+    warped = cv2.GaussianBlur(warped, (5, 5), 0)
+
+    # BGR -> HSV
+    hsv_image = cv2.cvtColor(warped, cv2.COLOR_BGR2HSV)
+
+    # skin color range HSV
+    lower_skin = np.array([0, 30, 60])
+    upper_skin = np.array([20, 170, 255])
+
+    # create mask for skin
+    mask_inv = cv2.inRange(hsv_image, lower_skin, upper_skin)
+
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
+    mask_inv = cv2.morphologyEx(mask_inv, cv2.MORPH_OPEN, kernel)
+    mask_inv = cv2.morphologyEx(mask_inv, cv2.MORPH_CLOSE, kernel)
+
+    # find contours
+    contours, _ = cv2.findContours(mask_inv, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+    if len(contours) == 0:
+        return warped
+
+    largest = max(contours, key=cv2.contourArea)
+    cv2.drawContours(warped, [largest], -1, (0, 0, 255), 4)
+
+    return warped
+
+
+def detect_collision():
+    pass
 
 def update(dt):
     pass
@@ -100,10 +129,9 @@ def update(dt):
 # create a video capture object for the webcam
 cap = cv2.VideoCapture(video_id)
 
-# get camera resolution -> set window width and height
+# get camera resolution ->  window width and height
 WINDOW_WIDTH = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
 WINDOW_HEIGHT = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-# print(f"Resolution: {int(WINDOW_WIDTH)}x{int(WINDOW_HEIGHT)}")
 
 # ArUco dictionary and parameters
 aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_6X6_250)
@@ -116,8 +144,13 @@ window = pyglet.window.Window(WINDOW_WIDTH, WINDOW_HEIGHT)
 
 @window.event
 def on_key_press(key, modifiers):
+    # close window with [ESC] or 'q'
     if key == pyglet.window.key.ESCAPE or key == pyglet.window.key.Q:
         pyglet.app.exit()
+    # restart game with 'r'
+    elif key == pyglet.window.key.R:
+        # TODO: restart
+        pass
 
 @window.event
 def on_close():
@@ -139,6 +172,7 @@ def on_draw():
             last_source = None
     if last_source is not None:
         warped = warp_frame(frame, last_source)
+        warped = detect_finger(warped)
         img = cv2glet(warped, "BGR")
     else:
         img = cv2glet(frame, "BGR")
