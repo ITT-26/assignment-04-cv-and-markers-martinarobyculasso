@@ -1,0 +1,65 @@
+AR GAME
+=======
+
+An augmented reality sorting game. A physical board with four ArUco markers
+at the corners is detected via webcam; the region between the markers is
+warped to fill the window. Players use their finger to drag animal sprites
+into their matching colored zones. Finger tracking is done via skin color
+detection in HSV space.
+
+FILES
+=====
+
+AR_game.py
+----------
+Main script. Handles ArUco marker detection, perspective warping, finger
+tracking, sprite logic, game state management, and rendering via pyglet.
+The game has three states: instructions, playing, and results.
+
+aruco_sample.py
+---------------
+Sample code provided by the course (ITT) demonstrating ArUco marker
+detection with OpenCV. Used as reference for detector setup and marker
+drawing in AR_game.py.
+
+opencv_pyglet.py
+----------------
+Sample code provided by the course (ITT) showing how to capture webcam
+frames with OpenCV and display them in a pyglet window using the cv2glet()
+conversion function. Used as the base structure for AR_game.py.
+
+assets/
+-------
+- pig.png, hippo.png     Animal sprites (Kenney Animal Pack, CC0)
+- Fredoka-VariableFont_wdth,wght.ttf    UI font (Google Fonts, OFL)
+
+NOTES
+=====
+- The board can temporarily leave the frame during gameplay; the last known
+  position is kept for up to 45 frames (MISS_THRESHOLD) before the game
+  pauses and prompts the user to reposition the board.
+- Skin detection HSV range was calibrated by manual testing and may need
+  adjustment depending on lighting conditions and skin tone.
+- The finger reference point is offset 10px downward from the topmost
+  contour point to better match the actual fingertip position.
+
+AI USAGE (Claude - Anthropic)
+==============================
+Claude was used for guidance and code assistance during development.
+Specific areas where Claude provided help:
+
+- Sprite non-overlapping spawn: suggested the minimum-distance check
+  approach in spawn_sprites() to avoid sprites spawning on top of each other.
+- OpenCV-to-pyglet coordinate conversion: explained the y-axis flip between
+  OpenCV (y=0 at top) and pyglet (y=0 at bottom) and helped implement the
+  coordinate conversion in update().
+- Sprite collision detection: helped implement the bounding box overlap
+  logic in rects_overlap() and the zone entry check in in_zone().
+- Helped write this info.txt file.
+
+REFERENCES
+==========
+- ArUco detection and warping logic based on ITT sample code (aruco_sample.py,
+  opencv_pyglet.py).
+- cv2glet() function: https://gist.github.com/nkymut/1cb40ea6ae4de0cf9ded7332f1ca0d55
+- OpenCV documentation: https://docs.opencv.org/

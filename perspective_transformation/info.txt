@@ -1,0 +1,51 @@
+PERSPECTIVE TRANSFORMATION
+==========================
+
+A tool to extract and correct the perspective of a region in an image.
+The user selects four corner points by clicking on the displayed image;
+the selected region is then warped to a flat rectangle at the specified
+output resolution using OpenCV's perspective transformation.
+
+FILES
+=====
+
+image_extractor.py
+------------------
+Main script. Loads an image, handles mouse click input for point selection,
+computes the perspective transformation matrix, and displays the warped result.
+Supports saving the result (S), resetting the selection (ESC), and quitting (Q).
+
+opencv_click.py
+---------------
+Sample code provided by the course (ITT) demonstrating OpenCV mouse callback
+usage. Used as reference for implementing click-based point selection in
+image_extractor.py.
+
+img_raw/
+--------
+Folder for input images. Contains sample_image.jpg as an example input.
+
+img_transf/
+-----------
+Folder where transformed output images are saved.
+
+NOTES
+=====
+- Points are automatically reordered (top-left, top-right, bottom-right,
+  bottom-left) regardless of the order in which the user clicks them.
+- The output resolution is specified via command line arguments;
+  the transformation adapts to any target size.
+
+AI USAGE (Claude - Anthropic)
+==============================
+Claude was used for guidance and code assistance during development.
+Specific areas where Claude provided help:
+
+- argparse setup: helped write the argument parser for the command line
+  parameters (input path, output path, width, height).
+- Helped write this info.txt file.
+
+REFERENCES
+==========
+- Perspective transformation logic based on ITT sample code (opencv_click.py).
+- OpenCV documentation: https://docs.opencv.org/

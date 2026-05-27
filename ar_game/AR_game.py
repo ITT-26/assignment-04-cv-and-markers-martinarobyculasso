@@ -9,7 +9,8 @@ import random
 
 WINDOW_WIDTH = 0
 WINDOW_HEIGHT = 0
-MISS_THRESHOLD = 45
+MISS_THRESHOLD = 45  # max number of frames in which 4 markers are not detected
+N = 4  # number of sprites for each animal
 
 last_source = None
 miss_count = 0
@@ -23,7 +24,7 @@ PINK = (220, 107, 173)
 BLUE = (113, 146, 190)
 WHITE = (228, 223, 218)
 PURPLE = (140, 122, 169)
-BLACK = (0,0,0)
+BLACK = (0, 0, 0)
 
 game_states = ["instructions", "playing", "results"]
 state = "instructions"
@@ -68,6 +69,7 @@ def detect_board(frame):
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     corners, ids, _ = detector.detectMarkers(gray)
 
+    # only return source array if 4 markers are visible
     if ids is None or len(ids) < 4:
         return None
 
@@ -79,7 +81,7 @@ def detect_board(frame):
     if any(pt is None for pt in source):
         return None
 
-    # order points by position: TL, TR, BL, BR
+    # order points by position (TL, TR, BL, BR)
     pts = np.float32(source)
     pts = pts[np.argsort(pts[:, 1])]
     top = pts[:2][np.argsort(pts[:2, 0])]
@@ -114,20 +116,22 @@ def warp_frame(frame, source):
 
 def detect_finger(warped):
 
+    # blur
     warped = cv2.GaussianBlur(warped, (5, 5), 0)
 
     # BGR -> HSV
     hsv_image = cv2.cvtColor(warped, cv2.COLOR_BGR2HSV)
 
-    # skin color range HSV
+    # skin color range in HSV (set up by testing)
     lower_skin = np.array([0, 30, 60])
     upper_skin = np.array([20, 170, 255])
 
     # create mask for skin
-    # NOTE: tried detecting white background instead and inverting the mask
+    # NOTE: tried detecting white background first and inverting the mask,
     # but it wasn't very reliable because of shadows
     mask = cv2.inRange(hsv_image, lower_skin, upper_skin)
 
+    # clean up mask using morph. operations
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
     mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
     mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
@@ -135,20 +139,21 @@ def detect_finger(warped):
     # find contours
     contours, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
+    # if no contours, return none
     if len(contours) == 0:
         return warped, None
 
-    # find largest contour -> hand/finger
+    # find largest contour -> assume it is the hand/finger
     largest = max(contours, key=cv2.contourArea)
     cv2.drawContours(warped, [largest], -1, (0, 0, 255), 4)
 
-    # find the topmost point of the contour (smallest Y = highest in image)
+    # find the topmost point of the contour (should be tip of the finger)
     topmost = tuple(largest[largest[:, :, 1].argmin()][0])
 
     # lower the reference point a little bit
     centroid = (topmost[0], topmost[1] + 10)
 
-    # define a small collision box around the fingertip (to be used for collisions)
+    # define a small collision box around the fingertip (to be used for collisions with game sprites)
     box_size = 30
     x1 = centroid[0] - box_size
     y1 = centroid[1] - box_size
@@ -185,7 +190,7 @@ class AnimalSprite:
         self.home_y = y
 
         self.held = False  # finger currently grabbing this sprite ?
-        self.sorted = False  # placed in its zone ?
+        self.sorted = False  # sprite placed in its zone ?
 
     def draw(self):
         if not self.sorted:
@@ -195,11 +200,13 @@ class AnimalSprite:
         self.sprite.x = x
         self.sprite.y = y
 
+    # return to starting position if taken into the wrong area
     def bounce_back(self):
         self.sprite.x = self.home_x
         self.sprite.y = self.home_y
         self.held = False
 
+    # get sprite bounding box for collisions
     def get_rect(self):
         hw = self.sprite.width // 2
         hh = self.sprite.height // 2
@@ -215,7 +222,7 @@ def spawn_sprites():
     sprites = []
     placed_positions = []
 
-    # safe spawn area: between the two zones, with some padding
+    # safe spawn area: between the two zones, with some padding between sprites
     padding = 60
     min_distance = 100  # minimum pixels between sprite centers
     x_min = padding
@@ -223,7 +230,7 @@ def spawn_sprites():
     y_min = ZONE_HEIGHT + padding
     y_max = WINDOW_HEIGHT - ZONE_HEIGHT - padding
 
-    for animal_type in ["pig"] * 4 + ["hippo"] * 4:
+    for animal_type in ["pig"] * N + ["hippo"] * N:
         # try up to 50 times to find a non-overlapping position
         for _ in range(50):
             x = random.randint(x_min, x_max)
@@ -245,10 +252,12 @@ def spawn_sprites():
 sprites = []
 
 
+# check if two rectangles collide
 def rects_overlap(r1, r2):
     return r1[0] < r2[2] and r1[2] > r2[0] and r1[1] < r2[3] and r1[3] > r2[1]
 
 
+# check if sprite center point is inside colored rectangle zone
 def in_zone(sprite, zone):
     cx = sprite.sprite.x
     cy = sprite.sprite.y
@@ -283,7 +292,7 @@ def update(dt):
             # move sprite to finger center
             sprite.update_position(fcx, fcy)
 
-            # check if sprite is in the correct zone → sort it
+            # check if sprite is in the correct zone
             correct_zone = zone_pink if sprite.type == "pig" else zone_blue
             wrong_zone = zone_blue if sprite.type == "pig" else zone_pink
 
@@ -291,7 +300,7 @@ def update(dt):
                 sprite.sorted = True
                 sprite.held = False
                 score += 1
-                # check if all sprites are sorted → game over
+                # check if all sprites are sorted -> game ends
                 if all(s.sorted for s in sprites):
                     state = "results"
 
@@ -300,7 +309,7 @@ def update(dt):
                 sprite.bounce_back()
 
         else:
-            # check if finger overlaps this sprite → grab it
+            # check if finger overlaps this sprite and grab it
             # only grab one sprite at a time
             already_holding = any(s.held for s in sprites)
             if not already_holding and rects_overlap(
@@ -334,16 +343,16 @@ zone_pink = pyglet.shapes.Rectangle(
     y=WINDOW_HEIGHT - ZONE_HEIGHT,
     width=WINDOW_WIDTH,
     height=ZONE_HEIGHT,
-    color=(255, 105, 180),  # pink
+    color=PINK,
 )
 zone_blue = pyglet.shapes.Rectangle(
     x=0,
     y=0,
     width=WINDOW_WIDTH,
     height=ZONE_HEIGHT,
-    color=(100, 149, 237),  # cornflower blue
+    color=BLUE,
 )
-# semi-transparent
+# transparency
 zone_pink.opacity = 120
 zone_blue.opacity = 120
 
@@ -369,9 +378,9 @@ score_label = pyglet.text.Label(
     "Score: 0",
     font_name="Fredoka",
     font_size=20,
-    color=PURPLE + (255,),
+    color=BLACK + (255,),
     x=10,
-    y=WINDOW_HEIGHT - ZONE_HEIGHT - 10,
+    y=WINDOW_HEIGHT - 10,
     anchor_x="left",
     anchor_y="top",
 )
@@ -381,9 +390,9 @@ timer_label = pyglet.text.Label(
     "Time: 0.0s",
     font_name="Fredoka",
     font_size=20,
-    color=PURPLE + (255,),
+    color=BLACK + (255,),
     x=WINDOW_WIDTH - 10,
-    y=WINDOW_HEIGHT - ZONE_HEIGHT - 10,
+    y=WINDOW_HEIGHT - 10,
     anchor_x="right",
     anchor_y="top",
 )
@@ -403,7 +412,7 @@ results_label = pyglet.text.Label(
     align="center",
 )
 
-# semi-transparent background for labels (instructions + results)
+# semi-transparent background for labels (instructions and results)
 label_bg = pyglet.shapes.Rectangle(
     x=WINDOW_WIDTH // 2 - 280,
     y=WINDOW_HEIGHT // 2 - 120,
@@ -464,7 +473,7 @@ def on_draw():
         instructions_label.draw()
 
     elif state == "playing" and last_source is None:
-        # board lost during game — prompt to replace it
+        # board lost during game -> show prompt to replace it
         instructions_label.text = "Place the board in front\nof the camera to continue"
         label_bg.draw()
         instructions_label.draw()
@@ -481,7 +490,7 @@ def on_draw():
         timer_label.draw()
 
     elif state == "results":
-        results_label.text = f"Well done!\n\nTime: {elapsed_time:.1f}s\n\nPress R to play again or Q to quit"
+        results_label.text = f"Well done!\n\nTime: {elapsed_time:.1f}s\n\nPress R to play again \nor Q/ESC to quit"
         label_bg.draw()
         results_label.draw()
 
