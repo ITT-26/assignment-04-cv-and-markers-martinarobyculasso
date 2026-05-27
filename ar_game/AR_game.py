@@ -223,8 +223,8 @@ def spawn_sprites():
     placed_positions = []
 
     # safe spawn area: between the two zones, with some padding between sprites
-    padding = 90
-    min_distance = 100  # minimum pixels between sprite centers
+    padding = 40
+    min_distance = 110  # minimum pixels between sprite centers
     x_min = padding
     x_max = WINDOW_WIDTH - padding
     y_min = ZONE_HEIGHT + padding
