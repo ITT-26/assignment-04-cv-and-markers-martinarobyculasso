@@ -79,7 +79,7 @@ img_original = img.copy()
 cv2.namedWindow(WINDOW_NAME)
 cv2.setMouseCallback(WINDOW_NAME, mouse_callback)
 cv2.imshow(WINDOW_NAME, img)
-print("\nClick 4 points to select the region. Press [ESC] to reset, [q] to quit.")
+print("\nClick 4 points to select the region. Press [ESC] to reset, 'q' to quit.")
 
 img_transformed = None
 
@@ -105,7 +105,7 @@ while True:
         img_transformed = None
         img = img_original.copy()
         cv2.imshow(WINDOW_NAME, img)
-        print("\nReset. Click 4 points to start over, [q] to quit.")
+        print("\nReset. Click 4 points to start over, 'q' to quit.")
 
     # quit with 'q'
     elif key == ord("q"):

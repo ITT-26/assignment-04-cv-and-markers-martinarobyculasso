@@ -223,7 +223,7 @@ def spawn_sprites():
     placed_positions = []
 
     # safe spawn area: between the two zones, with some padding between sprites
-    padding = 60
+    padding = 90
     min_distance = 100  # minimum pixels between sprite centers
     x_min = padding
     x_max = WINDOW_WIDTH - padding
@@ -448,7 +448,11 @@ def on_draw():
     global last_source, miss_count, state, sprites, finger_box
     window.clear()
     ret, frame = cap.read()
+
+    # detect board markers and update last known source points
     source = detect_board(frame)
+
+    # if board is known, warp frame and run finger detection
     if source is not None:
         last_source = source
         miss_count = 0
@@ -466,8 +470,11 @@ def on_draw():
         img = cv2glet(warped, "BGR")
     else:
         img = cv2glet(frame, "BGR")
+
+    # draw camera/warped image as background
     img.blit(0, 0, 0)
 
+    # draw UI layer based on current game state
     if state == "instructions":
         label_bg.draw()
         instructions_label.draw()
